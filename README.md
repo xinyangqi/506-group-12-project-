@@ -23,9 +23,9 @@ Our current outline includes the following items:
  - group_project_1.Rmd (Corresponding Rmarkdown file.)
  - group_project_1.html (Corresponding HTML file. Have to be downloaded for previewing.)
  
- **Tingwei Lin**:
- - GP.Rmd (The first version of Rmd file, contains R solutions using packages **data.table** and **splines**. Contains data cleaning, variable selection based on OLS outcomes and an OLS model keeping the main variables of interest.)
- - GP.html (Corresponding HTML file. Have to be downloaded for previewing.)
+ **Ting-Wei Lin**:
+ - group_project_tingwei (The first version of R file, contains R solutions using packages **data.table** and **splines**. Contains data cleaning, variable selection based on OLS outcomes and an OLS model keeping the main variables of interest.)
+ - group_project.html (Corresponding HTML file. Have to be downloaded for previewing.)
 
 ## Collaboration
 
