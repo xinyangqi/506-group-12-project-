@@ -1,0 +1,301 @@
+---
+title: "Group Project"
+author: "Group 12 - Ting-Wei Lin, Xinyang Qi, Jingwen Xiao"
+date: "12/5/2019"
+output: html_document
+---
+
+# Splines
+
+### Introduction
+
+The main question we are interested in is "Does people with more physial activity get longer sleep?". A new study concludes that people sleep significantly better and feel more alert during the day if they get at least 150 minutes of exercise a week. Physical activity seems to have a positive effect on people's sleeping condition, so we want to see it from real data if our data shows the same results.
+
+Moreover, there are many factors that can affect our sleeping condition. Like the amount of caffeine or sugar taken in a day, age and race etc. will also potentially affect on sleeping condition. People usually think taking more caffine will have less sleep and people with larger age will have less sleep.
+
+Our analysis will show whether the factors we considered are significant to sleeping time and if the relationships between each predictors and response variable are the same as our hypotesis.
+
+
+### Datasets and variables:
+
+NHANES 2005-2006
+
+Questionaire - 
+
+Sleep Disorders - SLD010H (How much sleep do you get (hr.)?), 
+Physical Activity - PAD080 ( How long per day(min.)), 
+PAQ520 (Compare activity w/ other same age)
+Physical Activity (individual ) - PADTIMES (# of times did activity in past 30 days), 
+PADDURAT (Avg duration of activity(min.))
+ 
+Dietary - 
+
+DR1IKCAL(Energy (kcal)), DR1ISUGR (Total sugars (gm)), DR1ICAFF (Caffeine (mg))
+DR2IKCAL(Energy (kcal)), DR2ISUGR (Total sugars (gm)), DR2ICAFF (Caffeine (mg))
+
+Demographic - 
+
+seqn, RIDGENDR (gender), RIDAGEYR (age), RIDRETH1(race/ethnicity), INDFMINC(annual family income), RIDEXMON
+
+### Methods 
+
+Jingwen Xiao: R (dplyr for data processing and ggplot2 on visualization)
+Tingwei Lin: R (data.table for data processing and base on visualization)
+Xinyang Qi: Python
+
+We are mainly using Linear regression and Splines to do fit on our data
+
+# {.tabset .tabset-fade .tabset-pills}
+
+## R (data.table)
+```{r, echo = TRUE, message = FALSE, results = 'hide'}
+## Group Project Draft
+## Author: Ting Wei Lin, tingwei@umich.edu
+## Updated: Dec. 5 2019
+
+# libraries: -------------------------------------------------------------------
+library(Hmisc)
+library(data.table)
+library(splines)
+
+# data: ------------------------------------------------------------------------
+path = "/Users/Sabrina/Documents/2019UMICH/STATS506/group project/data/"
+
+sleep = as.data.table(sasxport.get(paste0(path, "SLQ_D.XPT")))
+
+physical = as.data.table(sasxport.get(paste0(path, "PAQ_D.XPT")))
+
+physical_indv = as.data.table(sasxport.get(paste0(path, "PAQIAF_D.XPT")))
+
+demo = as.data.table(sasxport.get(paste0(path, "DEMO_D.XPT")))
+
+dietary1 = as.data.table(sasxport.get(paste0(path, "DR1TOT_D.XPT")))
+
+dietary2 = as.data.table(sasxport.get(paste0(path, "DR2TOT_D.XPT")))
+
+# 80: --------------------------------------------------------------------------
+
+# keep the variables we need
+sleep = sleep[, .(seqn, sld010h)]
+physical = physical[, .(seqn, pad080, paq520)]
+physical_indv = physical_indv[, .(seqn, padtimes, paddurat)]
+demo = demo[, .(seqn, riagendr, ridageyr, ridreth1, indfminc, ridexmon)]
+dietary1 = dietary1[, .(seqn, dr1tkcal, dr1tsugr, dr1tcaff, day = 1)]
+dietary2 = dietary2[, .(seqn, dr2tkcal, dr2tsugr, dr2tcaff, day = 2)]
+
+# rename colnames
+names(dietary1) = c("seqn", "drtkcal", "drtsugr", "drtcaff", "day")
+names(dietary2) = c("seqn", "drtkcal", "drtsugr", "drtcaff", "day")
+
+# merge day 1 data
+data1 = merge(sleep, physical, all = TRUE)
+data1 = merge(data1, physical_indv, all = TRUE)
+data1 = merge(data1, demo, all = TRUE)
+data1 = merge(data1, dietary1, all = TRUE)
+
+# merge day 2 data
+data2 = merge(sleep, physical, all = TRUE)
+data2 = merge(data2, physical_indv, all = TRUE)
+data2 = merge(data2, demo, all = TRUE)
+data2 = merge(data2, dietary2, all = TRUE)
+
+# row bind day 1 and day 2 data
+data = rbind(data1, data2)
+
+# omit the rows that have missing values
+data_naomit = data[complete.cases(data[])]
+
+# take mean for repeated seqn
+avg_value = data_naomit[, lapply(.SD, mean), by = .(seqn), 
+                    .SDcols = c("sld010h", "pad080", "paq520", "padtimes",
+                        "paddurat", "ridageyr", "ridreth1", "indfminc",
+                        "ridexmon", "drtkcal",  "drtsugr",  "drtcaff")]
+
+
+```
+
+```{r, echo = TRUE, include = TRUE}
+# fit linear model 
+model = lm(sld010h ~ pad080 + padtimes + ridageyr + as.factor(ridreth1) + 
+             indfminc + as.factor(ridexmon) + drtkcal + drtsugr + drtcaff, 
+           data = avg_value)
+summary(model)
+
+# do spline for "padtimes" variable
+spline_model = lm(sld010h ~ pad080 + bs(padtimes, df = 3) + ridageyr + 
+                    as.factor(ridreth1) + indfminc + as.factor(ridexmon) + 
+                    drtkcal + drtsugr + drtcaff, 
+                  data = avg_value)
+summary(spline_model)
+
+# plot relationship between Activity times and sleeping hours
+plot(avg_value$sld010h, avg_value$pad080, col="black"
+     ,xlab="Sleep (hr.)", ylab="Activity times (min.)",
+     main = "Relationship between Activity times and sleeping hours")
+
+# plot splines results
+plot(avg_value$sld010h, avg_value$padtimes, col="grey",xlab="Sleep (hr.)"
+     , ylab="Padtimes (# of times did activity in past 30 days)"
+     , main = "Splines Results")
+fit1 = smooth.spline(avg_value$sld010h, avg_value$padtimes, df=3) 
+lines(fit1,col="red",lwd=2)
+
+```
+
+### Result
+
+"age", "caffine" "pad080" and "ridreth1" are significant to sleeping hours. After doing Splines (df = 3) "padtimes" is partially significant to sleeping hours, but still doesn't show much of a relationship between "padtimes" and "sld010h".
+
+## Python
+```{r setup, include = FALSE}
+library(reticulate)
+use_python("/usr/local/bin/python")
+```
+
+```{python, eval = FALSE}
+
+# import package and read data
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+import xport
+from patsy import dmatrices
+from patsy import dmatrix
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+data1=pd.read_csv('ALQ_D.csv')
+data2=pd.read_csv('PAQ_D.csv')
+data3=pd.read_csv('PAQIAF_D.csv')
+data4=pd.read_csv('SLQ_D.csv')
+data5=pd.read_csv('DR1TOT_D.csv')
+data6=pd.read_csv('DEMO_D.csv')
+
+data2=data2[['SEQN','PAQ520']]
+data4=data4[['SEQN','SLD010H']]
+data3=data3[['SEQN','PADTIMES','PADDURAT']]
+data5=data5[['SEQN','DR1TKCAL','DR1TSUGR','DR1TCAFF']]
+data6=data6[['SEQN','RIAGENDR','RIDAGEYR']]
+
+data=pd.merge(data2,data3,on='SEQN',how='inner')
+data=pd.merge(data,data4,on='SEQN',how='inner')
+data=pd.merge(data,data5,on='SEQN',how='inner')
+data=pd.merge(data,data6,on='SEQN',how='inner')
+
+data=data[data.PAQ520 != 9]
+data=data[data.PAQ520 != 7]
+data=data[data.SLD010H != 77]
+data=data[data.SLD010H != 99]
+data=data.dropna()
+data=data.groupby('SEQN').mean()
+data.columns=['act_level','act_times','act_durat','sleep_time','energy','sugars','caffeine','gender','age']
+
+data['gender']=data['gender'].apply(str)
+data['act_level']=data['act_level'].apply(str)
+data1 = data._get_numeric_data()
+
+# In order to improve the model, we select variables based on their vif and Covariance matrix at first. 
+# Then, using backward elimination to select variables.
+# get y and X dataframes based on this regression:
+y, X = dmatrices('sleep_time ~ energy + sugars + caffeine + age + act_times + act_durat -1', data1, return_type='dataframe')
+
+# Calculate VIF
+vif=pd.DataFrame()
+vif["VIF Factor"] = [variance_inflation_factor(X.values,i) for i in range(X.shape[1])]
+vif["features"]=X.columns
+
+print(vif)
+
+# Calculate covariance matrix
+data1.drop('sleep_time',axis=1).corr()
+
+# Create an OLS regression model based on the latest data.
+mod = smf.ols(formula='sleep_time ~ act_times + act_durat + caffeine + age + gender', data=data)
+res = mod.fit()
+print(res.summary())
+
+# From the summary, we can find that the predictor of act_durat is not significant. However, maybe it doesn't have linear relationship with sleep time. 
+# So we decide to use spline regression to try to improve its fit.
+transformed_x1 = dmatrix("bs(data.act_durat, df=3, degree = 3, include_intercept=False)",
+                        {"data.act_durat": data.act_durat}, return_type='dataframe')
+
+mod2 = sm.GLM(data.sleep_time, transformed_x1).fit()
+print(mod2.summary())
+
+```
+
+## R (dplyr)
+
+```{r, echo = TRUE, include = TRUE, eval = FALSE}
+
+# Group Project 
+
+# Data read and process.
+library(SASxport)
+library(dplyr)
+library(mgcv)
+alc = read.xport("C:/Users/Surface-pc/Downloads/ALQ_D.xpt")
+phy = read.xport("C:/Users/Surface-pc/Downloads/PAQ_D.xpt")
+phy_id = read.xport("C:/Users/Surface-pc/Downloads/PAQIAF_D.xpt")
+slp = read.xport("C:/Users/Surface-pc/Downloads/SLQ_D.xpt")
+demo = read.xport("C:/Users/Surface-pc/Downloads/DEMO_D.xpt")
+total_d1 = read.xport("C:/Users/Surface-pc/Downloads/DR1TOT_D.xpt")
+total_d2 = read.xport("C:/Users/Surface-pc/Downloads/DR2TOT_D.xpt")
+
+
+alc = alc %>% transmute(seqn = SEQN, alcohol = ALQ130)
+phy = phy %>% transmute(seqn = SEQN, pa_comp = PAQ520)
+phy_id = phy_id %>% transmute(seqn = SEQN, pa_time = PADTIMES, pa_dur = PADDURAT)
+slp = slp %>% transmute(seqn = SEQN, sleep = SLD010H)
+demo = demo %>% transmute(seqn = SEQN, gender = RIAGENDR, age = RIDAGEYR, 
+                          race = RIDRETH1, inc = INDFMINC, winter = RIDEXMON)
+total_d1 = total_d1 %>% transmute(seqn = SEQN, energy_1 = DR1TKCAL, 
+                                  sugar_1 = DR1TSUGR, caffe_1 = DR1TCAFF)
+total_d2 = total_d2 %>% transmute(seqn = SEQN, energy_2 = DR2TKCAL, 
+                                  sugar_2 = DR2TSUGR, caffe_2 = DR2TCAFF)
+data = left_join(demo, alc, by="seqn") %>% left_join(phy_id, by="seqn") %>% 
+       left_join(phy, by = "seqn") %>% left_join(total_d1, "seqn") %>% 
+       left_join(slp, "seqn") %>% filter(!is.na(sleep), pa_comp%in%c(1, 2, 3), 
+         alcohol!=999, sleep<77, inc<12) %>% mutate(gender = ifelse(gender==1, 1, 0), 
+         Mex = ifelse(race == 1, 1, 0), Hisp = ifelse(race == 2, 1, 0), 
+         NHwhite = ifelse(race == 3, 1, 0), NHblack = ifelse(race == 4, 1, 0), 
+         pa_high = ifelse(pa_comp == 1, 1, 0), pa_low = ifelse(pa_comp == 2, 1, 0),
+         winter = ifelse(winter == 1, 1, 0), pad = pa_time*pa_dur) %>% 
+       select(-c("race","pa_comp", "pa_time", "pa_dur"))
+
+# A version without encoding factor variables.
+data1 = left_join(demo, alc, by="seqn") %>% left_join(phy_id, by="seqn") %>% 
+  left_join(phy, by = "seqn") %>% left_join(total_d1, "seqn") %>% 
+  left_join(slp, "seqn") %>% filter(!is.na(sleep), pa_comp%in%c(1, 2, 3), 
+            alcohol!=999, sleep<77, inc<12) %>% mutate(gender = ifelse(gender==1, 1, 0), 
+            winter = ifelse(winter == 1, 1, 0), pad = pa_time*pa_dur) %>% 
+  select(-c("pa_time", "pa_dur"))
+
+# Quick check: how many missing values.
+colSums(apply(data, 2, is.na))
+
+dat = data%>%filter(rowSums(apply(data,2,is.na))==0) %>% group_by(seqn) %>% 
+      mutate(pad = mean(pad)) %>% distinct()
+dat1 = data1%>%filter(rowSums(apply(data,2,is.na))==0) %>% group_by(seqn) %>% 
+  mutate(pad = mean(pad)) %>% distinct()
+
+# Simple OLS. (Rsq~0.06)
+result0=lm(sleep~.,data=dat)
+summary(result0)
+
+# GAM with some variables discarded. (Rsq~0.07)
+result=gam(sleep~as.factor(Mex)+as.factor(NHwhite)+as.factor(NHblack)+as.factor(pa_low)+
+           s(age,k=3)+s(alcohol,k=3)+s(pad,k=3)+
+           s(energy_1,k=3)+s(sugar_1,k=3)+s(caffe_1,k=3),data=dat)
+summary(result)
+
+result1=gam(sleep~as.factor(race)+as.factor(pa_comp)+
+            s(age,k=3)+s(alcohol,k=3)+s(pad,k=3)+s(energy_1,k=3)+s(sugar_1,k=3)+
+            s(caffe_1,k=3),data=dat1)
+summary(result1)
+
+# Discarded variables. Do not run.
+#gender+winter+s(inc,k=3)+pa_high+Hisp+NHblack+s(seqn,bs="re")
+```
+
+### End tabset
