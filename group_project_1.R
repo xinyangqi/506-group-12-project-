@@ -3,6 +3,7 @@
 # Data read and process.
 library(SASxport)
 library(dplyr)
+library(mgcv)
 alc = read.xport("C:/Users/Surface-pc/Downloads/ALQ_D.xpt")
 phy = read.xport("C:/Users/Surface-pc/Downloads/PAQ_D.xpt")
 phy_id = read.xport("C:/Users/Surface-pc/Downloads/PAQIAF_D.xpt")
@@ -48,14 +49,20 @@ dat = data%>%filter(rowSums(apply(data,2,is.na))==0) %>% group_by(seqn) %>%
 dat1 = data1%>%filter(rowSums(apply(data,2,is.na))==0) %>% group_by(seqn) %>% 
   mutate(pad = mean(pad)) %>% distinct()
 
-# Rsq~0.07
+# Simple OLS. (Rsq~0.06)
+result0=lm(sleep~.,data=dat)
+summary(result0)
+
+# GAM with some variables discarded. (Rsq~0.07)
 result=gam(sleep~as.factor(Mex)+as.factor(NHwhite)+as.factor(NHblack)+as.factor(pa_low)+
            s(age,k=3)+s(alcohol,k=3)+s(pad,k=3)+
            s(energy_1,k=3)+s(sugar_1,k=3)+s(caffe_1,k=3),data=dat)
+summary(result)
 
 result1=gam(sleep~as.factor(race)+as.factor(pa_comp)+
             s(age,k=3)+s(alcohol,k=3)+s(pad,k=3)+s(energy_1,k=3)+s(sugar_1,k=3)+
             s(caffe_1,k=3),data=dat1)
+summary(result1)
 
 # Discarded variables. Do not run.
 #gender+winter+s(inc,k=3)+pa_high+Hisp+NHblack+s(seqn,bs="re")
