@@ -22,6 +22,13 @@ Our current outline includes the following items:
  - group_project_1.R (The first version of R solutions using packages **dplyr** and **mgcv**. Contains data cleaning, variable recoding and selection based on primary GAM model outcomes and a simple OLS for reference. Current GAM model includes factor variables and smooth splines up to k = 3.)
  - group_project_1.Rmd (Corresponding Rmarkdown file.)
  - group_project_1.html (Corresponding HTML file. Have to be downloaded for previewing.)
+ - group_project_1.1.R (A slightly modified version assessing the effect of single variable **pad**. Contains graphs for three versions of processed dataset.)
+ - group_project_2.R (The second version with more revision/addition:
+   - Modify the restrictions on valid respondents.
+   - Cancell restriction on **k**.
+   - Add a jitter to response **sleep** to mimic real-life situation.
+   - Make attempts towards cross-vaildation, though somewhat failed.
+   - Calculate the RMSEs. )
  
  **Ting-Wei Lin**:
   - group_project_tingwei.R (The first version of R file, contains R solutions using packages **data.table** and **splines**. Contains data cleaning, variable selection based on OLS outcomes and an OLS model keeping the main variables of interest.)
