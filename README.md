@@ -25,7 +25,7 @@ Our current outline includes the following items:
  - group_project_1.1.R (A slightly modified version assessing the effect of single variable **pad**. Contains graphs for three versions of processed dataset.)
  - group_project_2.R (The second version with more revision/addition:
    - Modify the restrictions on valid respondents.
-   - Cancell restriction on **k**.
+   - Cancel restrictions on **k**.
    - Add a jitter to response **sleep** to mimic real-life situation.
    - Make attempts towards cross-vaildation, though somewhat failed.
    - Calculate the RMSEs. )
