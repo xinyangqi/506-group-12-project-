@@ -1,6 +1,7 @@
 ## Group Project Draft
 ## Author: Ting Wei Lin, tingwei@umich.edu
-
+## Using data from NHANES. Select several dataset we need and
+## analyse whether the variables have influence on sleeping hours
 ## Updated: Dec. 11 2019
 
 # libraries: -------------------------------------------------------------------
