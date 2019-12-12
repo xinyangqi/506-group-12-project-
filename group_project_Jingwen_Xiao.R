@@ -184,5 +184,5 @@ cap_title2 = '**Table 2.** *Full-data RMSE Results of Different Models.*'
 kable(t(RMSE), digits = 4, caption = cap_title2, col.names = cols, align = 'c')%>%
   kable_styling("striped", position = "center")
 
-# 1.25488  1.25692  1.25686  1.25686
+# 1.25692  1.25686  1.25686  1.25488  
 # Not a large difference, but slightly better.
