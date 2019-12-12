@@ -33,7 +33,7 @@ Our current outline includes the following items:
  **Ting-Wei Lin**: Under "TingWeiLin" file
   - group_project_tingwei.R (The last version of R file, contains R solutions using packages **data.table** and **splines**. Contains data cleaning, variable selection based on OLS outcomes and an OLS model keeping the main variables of interest.)
   - group_project_tingwei.Rmd (Corresponding Rmarkdown file.)
-  - group_project.R (The first version of R file, the combination of the group projects)
+  - group_project.Rmd (The Rmd file, the combination of the group projects)
   - group_project.html (Corresponding HTML file. Have to be downloaded for previewing.)
 
 ## Collaboration
