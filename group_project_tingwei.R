@@ -1,4 +1,4 @@
-## Group Project
+## STATS 506 Group Project
 ## Author: Ting Wei Lin, tingwei@umich.edu
 ## Using data from NHANES. Select several dataset we need and
 ## analyse whether the variables have influence on sleeping hours
@@ -140,7 +140,6 @@ coef(model_lm3) # extract coefficient
 
 # do spline for "pad" variable
 spline_model = lm(sleep ~ bs(pad),  data = data_new2)
-
 summary(spline_model)
 
 # plot splines results compare with the one without spline

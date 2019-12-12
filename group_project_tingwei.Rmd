@@ -1,5 +1,5 @@
 ---
-title: "Group Project"
+title: "STATS 506 Group Project"
 author: "Ting Wei Lin, tingwei@umich.edu"
 date: "12/11/2019"
 output: pdf_document
