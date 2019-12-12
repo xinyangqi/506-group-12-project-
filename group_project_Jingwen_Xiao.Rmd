@@ -1,0 +1,225 @@
+---
+title: "Group 12 Project (R-dplyr-mgcv version)"
+author: "Jingwen(Alex) Xiao"
+date: "2019/12/11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First read data and import packages. 
+```{r}
+library(SASxport)
+library(dplyr)
+library(mgcv)
+library(tidyr)
+library(ggplot2)
+library(kableExtra)
+alc = read.xport("C:/Users/Surface-pc/Downloads/ALQ_D.xpt")
+phy = read.xport("C:/Users/Surface-pc/Downloads/PAQ_D.xpt")
+phy_id = read.xport("C:/Users/Surface-pc/Downloads/PAQIAF_D.xpt")
+slp = read.xport("C:/Users/Surface-pc/Downloads/SLQ_D.xpt")
+demo = read.xport("C:/Users/Surface-pc/Downloads/DEMO_D.xpt")
+total_d1 = read.xport("C:/Users/Surface-pc/Downloads/DR1TOT_D.xpt")
+```
+
+Select variables that might be of interest.
+
+```{r}
+alc = alc %>% transmute(seqn = SEQN, alcohol = ALQ130)
+phy = phy %>% transmute(seqn = SEQN, pa_comp = PAQ520)
+phy_id = phy_id %>% transmute(seqn = SEQN, pa_time = PADTIMES, pa_dur = PADDURAT)
+slp = slp %>% transmute(seqn = SEQN, sleep = SLD010H)
+demo = demo %>% transmute(seqn = SEQN, gender = RIAGENDR, age = RIDAGEYR, 
+                          race = RIDRETH1, inc = INDFMINC, winter = RIDEXMON)
+total_d1 = total_d1 %>% transmute(seqn = SEQN, energy_1 = DR1TKCAL, 
+                                  sugar_1 = DR1TSUGR, caffe_1 = DR1TCAFF)
+```
+
+Day 2 data is currently dropped to get more complete observations. Currently $n = 1769$.
+
+Merge dataframes and recode factor variables. An uncoded version is available in the second following chunk.
+
+```{r}
+data = left_join(demo, alc, by="seqn") %>% left_join(phy_id, by="seqn") %>% 
+       left_join(phy, by = "seqn") %>% left_join(total_d1, "seqn") %>% 
+       left_join(slp, "seqn") 
+```
+
+Before moving on, we perform a quick check on the number of missing values in each variable to get a better view of the current dataset.
+
+```{r}
+colSums(apply(data, 2, is.na))
+```
+
+Results of this part is available in the data description. Now we recode some of the variables and get rid of observations with numeric codes representing "refuse" or "don't know". Another version with no factor recode is shown in the second chunk.
+
+```{r}
+data = data %>% filter(!is.na(sleep), pa_comp%in%c(1, 2, 3), 
+         alcohol!=999, sleep<77, inc<12) %>% mutate(gender = ifelse(gender==1, 1, 0), 
+         Mex = ifelse(race == 1, 1, 0), Hisp = ifelse(race == 2, 1, 0), 
+         NHwhite = ifelse(race == 3, 1, 0), NHblack = ifelse(race == 4, 1, 0), 
+         pa_high = ifelse(pa_comp == 1, 1, 0), pa_low = ifelse(pa_comp == 2, 1, 0),
+         winter = ifelse(winter == 1, 1, 0), pad = pa_time*pa_dur/60) %>% 
+       select(-c("race","pa_comp", "pa_time", "pa_dur"))
+```
+```{r}
+data1 = left_join(demo, alc, by="seqn") %>% left_join(phy_id, by="seqn") %>% 
+  left_join(phy, by = "seqn") %>% left_join(total_d1, "seqn") %>% 
+  left_join(slp, "seqn") %>% filter(!is.na(sleep), pa_comp%in%c(1, 2, 3), 
+            alcohol!=999, sleep<77, inc<12) %>% mutate(gender = ifelse(gender==1, 1, 0), 
+            winter = ifelse(winter == 1, 1, 0), pad = pa_time*pa_dur/60) %>% 
+  select(-c("pa_time", "pa_dur"))
+```
+
+Now remove incomplete observaions.
+
+```{r}
+dat = data[complete.cases(data),] %>% group_by(seqn) %>% 
+      mutate(pad = mean(pad)) %>% distinct()
+dat1 = data1[complete.cases(data1),] %>% group_by(seqn) %>% 
+       mutate(pad = mean(pad)) %>% distinct()
+```
+
+For the analysis part, it is always a nice choice to first perform an OLS. The $R^2$ of this model is around 0.0576, with an adjusted $R^2$ of about 0.0495.
+
+```{r}
+result0=lm(sleep~as.factor(gender) + age + inc + as.factor(winter) +
+             alcohol + energy_1 + sugar_1 + caffe_1 + as.factor(Mex) + as.factor(Hisp) +
+             as.factor(NHwhite) + as.factor(NHblack) + as.factor(pa_high) +
+             as.factor(pa_low) + pad, data=dat)
+summary(result0)
+```
+
+Next fit a GAM on both processed data sets. The total deviation explained is 8.26%, obviously better than the OLS result. Adjusted $R^2$ dropped a little (~0.07) when factor variables are not recoded, so the recoded version will be kept in later versions.
+
+```{r}
+result=gam(sleep~as.factor(Mex)+as.factor(NHwhite)+as.factor(NHblack)+
+           as.factor(pa_low)+s(age)+s(alcohol)+s(pad)+
+           s(energy_1)+s(sugar_1)+s(caffe_1),data=dat)
+summary(result)
+```
+```{r}
+result1=gam(sleep~as.factor(race)+as.factor(pa_comp)+
+            s(age)+s(alcohol)+s(pad)+s(energy_1)+s(sugar_1)+
+            s(caffe_1),data=dat1)
+summary(result1)
+```
+
+To have a look on the effect of variable **pad**, we use spline regression for this term only. The output plot shows a straight line and is strongly affected by two points with extreme **pad** values.
+
+```{r}
+res_pad = gam(sleep ~ s(pad), data = dat)
+df = data.frame(x = dat$pad, y=dat$sleep, z=fitted(res_pad))
+ggplot(df) + geom_point(aes(x = x, y = y), col="cornflowerblue") + 
+  geom_line(aes(x = x, y = z),col = "gray") + 
+  labs(x = "Monthly Physical Activity(hour)", y = "Sleep")
+```
+
+Now we discard the two large points. We somehow got a curvature in the plot, but the discrepancy is not very much convincing.
+
+```{r}
+dat2 = as.data.frame(dat[dat$pad<200, ])
+res_pad1 = gam(sleep~s(pad), data = dat2)
+df1 = data.frame(x = dat2$pad, y = dat2$sleep, z = fitted(res_pad1))
+ggplot(df1) + geom_point(aes(x = x, y = y), col = "cornflowerblue") + 
+  geom_line(aes(x = x, y = z), col = "gray") + 
+  labs(x = "Monthly Physical Activity(hour)", y = "Sleep")
+```
+
+Since there could be a difference between the complete observations and incomplete observations, we perform the same actions on the full dataset, only dropping observations with missing values on **pad** and **sleep**. However, since we witnessed only a slight downward trend in this part of data, it seems that the response itself is somewhat random.
+
+```{r}
+data_pad = left_join(slp, phy, by="seqn") %>% 
+  left_join(phy_id, by="seqn") %>% filter(!is.na(sleep), sleep<77) %>% 
+  mutate(pad = pa_time*pa_dur/60) %>% select(-c("pa_time", "pa_dur"))
+
+data_pad = data_pad%>%filter(rowSums(apply(data_pad,2,is.na))==0) %>% select(-"pa_comp")%>%
+  group_by(seqn) %>% mutate(pad = mean(pad)) %>% distinct()
+
+res_pad2 = gam(sleep~s(pad), data = data_pad)
+df2 = data.frame(x = data_pad$pad, y = data_pad$sleep, z = fitted(res_pad2))
+ggplot(df2) + geom_point(aes(x = x, y = y), col = "cornflowerblue") + 
+  geom_line(aes(x = x, y =z ), col = "gray") + 
+  labs(x = "Monthly Physical Activity(hour)", y = "Sleep")
+```
+
+Now that we know that data selection is not really the problem, we could turn back to the truncated data. We assume that reported sleeping hours should be an approximate value, so a jitter is added to mimic real-life scenarios, which also converts **sleep** to the type "continuous". Keep in mind that we hope that most of the respondents should get the right approximated value. In this case, $\sigma=0.2$ is chosen to guarantee that at least 99% of the values are approximated to the reported integer.
+
+```{r}
+eps=rnorm(nrow(dat2), 0, 0.04)
+dat_eps = as.data.frame(dat[dat$pad<200, ])
+dat_eps = dat_eps %>% mutate(sleep = as.numeric(sleep)+eps)
+res_eps_pad = gam(sleep~s(pad), data = dat_eps)
+df_eps = data.frame(x=dat_eps$pad,y=dat_eps$sleep, z=fitted(res_eps_pad))
+ggplot(df_eps) + geom_point(aes(x=x,y=y),col="cornflowerblue") + 
+  geom_line(aes(x=x,y=z),col="gray") + 
+  labs(x = "Monthly Physical Activity(hour)", y = "Sleep")
+```
+
+For comparison, consider OLS and polynomials of power 2 and 3. Though no model is reporting a significant contribution from **pad**, it seems that the spline model is still doing better.
+
+```{r}
+ols_eps = lm(sleep~pad, dat_eps)
+summary(ols_eps) 
+poly_eps2 = lm(sleep~poly(pad, 2),dat_eps)
+summary(poly_eps2) 
+poly_eps3 = lm(sleep~poly(pad,3),dat_eps) 
+summary(poly_eps3) 
+```
+
+To have a closer look on the effects, we perform 10-fold cross validation and RMSE calculation with these four models. Unfortunately, spline method is not performing well in the CV part.
+
+```{r}
+N = nrow(dat_eps)
+ind = rep(1:10, N%/%10+1)[1:N]
+r_ind=sample(ind, N, F)
+mat_rmse=matrix(0,10,4)
+for (i in 1:10){
+  train = dat_eps[r_ind!=i, ]
+  test = dat_eps[r_ind==i, ]
+  test_x=test%>%select(-"sleep")
+  test_y=test[,"sleep"]   
+  ols_train = lm(sleep~pad, data = train)
+  ols_test=predict(ols_train,test_x)
+  p2_train = lm(sleep~poly(pad,2), data = train)
+  p2_test=predict(p2_train,test_x)
+  p3_train = lm(sleep~poly(pad,3), data = train)
+  p3_test=predict(p3_train,test_x)
+  gam_train = gam(sleep~s(pad), data = train)
+  gam_test=predict(gam_train,test_x)
+  mat_rmse[i,1]=sqrt(mean((test_y-ols_test)^2))
+  mat_rmse[i,2]=sqrt(mean((test_y-p2_test)^2))
+  mat_rmse[i,3]=sqrt(mean((test_y-p3_test)^2))
+  mat_rmse[i,4]=sqrt(mean((test_y-gam_test)^2))
+}
+```
+```{r}
+names = c('OLS', 'Polynomial(2)', 'Polynomial(3)', 'Spline/GAM')
+CV = colMeans(mat_rmse) 
+cap_title1 = '**Table 1.** *Cross-validation Results of Different Models.*'
+cols = c('OLS','Polynomial(2)','Polynomial(3)','Spline/GAM')
+kable(t(CV), digits = 4, caption = cap_title1, col.names = cols, align = 'c')%>%
+      kable_styling("striped", position = "center")
+```
+
+However, spline method is slightly better in RMSE than others when using the whole dataset.
+
+```{r}
+rmse = function(method){
+ round(sqrt(mean(method$residual^2)),5)
+}
+rmse_ols = rmse(ols_eps)
+rmse_poly2 = rmse(poly_eps2)
+rmse_poly3 = rmse(poly_eps3)
+rmse_gam = rmse(res_eps_pad)
+RMSE =c(rmse_ols, rmse_poly2, rmse_poly3, rmse_gam)
+cap_title2 = '**Table 2.** *Full-data RMSE Results of Different Models.*'
+kable(t(RMSE), digits = 4, caption = cap_title2, col.names = cols, align = 'c')%>%
+  kable_styling("striped", position = "center")
+```
+
+To this point, we have to re-think whether physical activity really have a discriminative effect on the sleep time. In fact, the sleep time that people need is rather random, and the contribution from other factors are somewhat minor.
+
