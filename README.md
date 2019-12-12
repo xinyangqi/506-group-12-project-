@@ -8,10 +8,10 @@
 
 ## Outline
 Our current outline includes the following items:
-  - Data cleaning, including variable selection, handle of missing value and some level of factor recoding. **(Mostly completed)**
-  - Model building. Current main model is spline regression, with some early attempt on OLS and mixed models. **(In progress)**
-  - Comparison using summary statistic metrics and/or cross validation with other models implied, depending on the goodness of fit. **(To do)**
-  - Visualization and comments on the results. Tools for this part are probably ggplot2/base for R and matplotlib for Python. **(To do)**
+  - Data cleaning, including variable selection, handle of missing value and some level of factor recoding. 
+  - Model building. Current main model is spline regression, with some early attempt on OLS and mixed models. 
+  - Comparison using summary statistic metrics and/or cross validation with other models implied, depending on the goodness of fit. 
+  - Visualization and comments on the results. Tools for this part are probably ggplot2/base for R and matplotlib for Python. 
 
 ## Uploaded Files 
  
@@ -29,6 +29,11 @@ Our current outline includes the following items:
    - Add a jitter to response **sleep** to mimic real-life situation.
    - Make attempts towards cross-vaildation, though somewhat failed.
    - Calculate the RMSEs. )
+ - group_project_3.R (The third version with minor revision from group member suggestions.)
+ - group_project_Jingwen_Xiao.R (The final version with full analysis and comments.)
+ - group_project_Jingwen_Xiao.Rmd (Corresponding Rmarkdown file.)
+ - group_project_Jingwen_Xiao.html (Corresponding HTML file. Have to be downloaded for previewing.)
+ - data and variable description.Rmd (Data/variable description for the report.)
  
  **Ting-Wei Lin**: Under "TingWeiLin" file
   - group_project_tingwei.R (The last version of R file, contains R solutions using packages **data.table** and **splines**. Contains data cleaning, variable selection based on OLS outcomes and an OLS model keeping the main variables of interest.)
@@ -38,4 +43,11 @@ Our current outline includes the following items:
 
 ## Collaboration
 
-Most ideas are share via communication APP and emails so far. Decent review files will be updated in the following days.
+Most ideas are share via communication APP and emails.
+For group member reviews and discussions, see the **issues** section.
+Past group meeting dates:
+- Nov. 23rd
+- Nov. 25th
+- Dec. 3th
+- Dec. 8th
+- Dec. 11th
