@@ -51,16 +51,19 @@ dat1 = data1%>%filter(rowSums(apply(data,2,is.na))==0) %>% group_by(seqn) %>%
        mutate(pad = mean(pad)) %>% distinct()
 
 # Simple OLS. (Rsq~0.0575)
-result0=lm(sleep~.-seqn, data=dat)
+result0=lm(sleep~as.factor(gender) + age + inc + as.factor(winter) +
+             alcohol + energy_1 + sugar_1 + caffe_1 + as.factor(Mex) + as.factor(Hisp) +
+             as.factor(NHwhite) + as.factor(NHblack) + as.factor(pa_high) +
+             as.factor(pa_low) + pad, data=dat)
 summary(result0)
 
-# GAM with some variables discarded. (Rsq~0.0711, explained deviance~8.26% when k is not set.)
+# GAM with some variables discarded. (Adj Rsq~0.0711, explained deviance~8.26% when k is not set.)
 result=gam(sleep~as.factor(Mex)+as.factor(NHwhite)+as.factor(NHblack)+
            as.factor(pa_low)+s(age)+s(alcohol)+s(pad)+
            s(energy_1)+s(sugar_1)+s(caffe_1),data=dat)
 summary(result)
 
-# Rsq dropped a little (~0.07) when factor variables are not recoded. 
+# Adj Rsq dropped a little (~0.07) when factor variables are not recoded. 
 # The recoded version will be kept in later versions.
 result1=gam(sleep~as.factor(race)+as.factor(pa_comp)+
             s(age)+s(alcohol)+s(pad)+s(energy_1)+s(sugar_1)+
