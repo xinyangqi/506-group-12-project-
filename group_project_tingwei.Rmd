@@ -1,0 +1,237 @@
+---
+title: "Group Project"
+author: "Ting Wei Lin, tingwei@umich.edu"
+date: "12/11/2019"
+output: pdf_document
+---
+
+```{r, message=FALSE}
+# libraries: -------------------------------------------------------------------
+library(Hmisc)
+library(data.table)
+library(splines)
+```
+
+```{r, result = hide, message=FALSE}
+# data: ------------------------------------------------------------------------
+path = "/Users/Sabrina/Documents/2019UMICH/STATS506/group project/data/"
+
+sleep = as.data.table(sasxport.get(paste0(path, "SLQ_D.XPT")))
+alc =  as.data.table(sasxport.get(paste0(path, "ALQ_D.xpt")))
+physical = as.data.table(sasxport.get(paste0(path, "PAQ_D.XPT")))
+physical_indv = as.data.table(sasxport.get(paste0(path, "PAQIAF_D.XPT")))
+demo = as.data.table(sasxport.get(paste0(path, "DEMO_D.XPT")))
+dietary1 = as.data.table(sasxport.get(paste0(path, "DR1TOT_D.XPT")))
+dietary2 = as.data.table(sasxport.get(paste0(path, "DR2TOT_D.XPT")))
+```
+
+Data cleaning, delete the ones that have no correct response
+```{r}
+# 80: --------------------------------------------------------------------------
+
+# keep the variables we need, and filter the unreasonale data
+sleep = sleep[sld010h < 77, .(seqn, sld010h)]
+alc = alc[alq130 < 100,.(seqn, alq130)]
+physical = physical[paq520 < 7, .(seqn, paq520)]
+physical_indv = physical_indv[, .(seqn, padtimes, paddurat)]
+demo = demo[indfminc < 12, .(seqn, riagendr, ridageyr, ridreth1, indfminc, ridexmon)]
+dietary1 = dietary1[, .(seqn, dr1tkcal, dr1tsugr, dr1tcaff)]
+# rename colnames
+names(dietary1) = c("seqn", "drtkcal", "drtsugr", "drtcaff")
+```
+
+###Part1.
+
+```{r}
+# merge day 1 data
+data1 = merge(sleep, physical, all = TRUE)
+data1 = merge(data1, alc, all = TRUE)
+data1 = merge(data1, physical_indv, all = TRUE)
+data1 = merge(data1, demo, all = TRUE)
+data1 = merge(data1, dietary1, all = TRUE)
+
+# rename colnames
+names(data1) = c("seqn", "sleep", "pa_comp", "alcohol", "padtimes", 
+                 "paddurat", "gender", "age", "race", "inc", "winter", 
+                 "energy", "sugar", "caffeine")
+
+# omit the rows that have missing values
+data1_naomit = data1[complete.cases(data1[])]
+```
+
+Timing "paddurat" and "padtimes" then divide it by 60 to get "pad".
+"pad" = total activity times in past 30 days in hours.
+```{r}
+# compute total activity times (hr.) in past 30 days
+data1_pad = data1_naomit[, .(pad = paddurat*padtimes/60)]
+# cbind two dataset
+data1_use = cbind(data1_naomit, data1_pad)
+```
+
+We take mean for each variables within the same seqn (id) group. 
+To avoid repeated seqn appears in the dataset.
+Then decode the factor variables into seperate categories.
+After cleaning the data, we'll get 1769 observation for this dataset.
+```{r}
+# take mean for repeated seqn
+data1_avg_value = data1_use[, lapply(.SD, mean), by = .(seqn), 
+                    .SDcols = c("sleep", "alcohol", "pa_comp", 
+                                "padtimes", "paddurat", "age", "race", 
+                                "inc", "winter", "gender", "energy",
+                                "sugar", "caffeine", "pad")]
+# decode the factors
+data_new1 = data1_avg_value[, `:=` (Mex = 1L * {race == 1},
+              Hisp = 1L * {race == 2}, NHwhite = 1L * {race == 3}, 
+              NHblack = 1L * {race == 4}, pa_high = 1L * {pa_comp == 1}, 
+              pa_low = 1L * {pa_comp == 2}, winter = 1L * {winter == 1})]
+```
+
+Fit OLS model for all variables in the dataset.
+```{r}
+# fit linear model for all variables
+model_lm1 = lm(sleep ~ alcohol + energy + sugar + caffeine + 
+                 as.factor(gender) + age + as.factor(inc) + as.factor(winter) + 
+                 as.factor(Mex) + as.factor(Hisp) + as.factor(NHwhite)+
+                 as.factor(NHblack) + as.factor(pa_high) + as.factor(pa_low) + 
+                 pad, data = data_new1)
+
+summary(model_lm1)
+```
+
+We found out that the Adjusted $R^2$ is really low and it contains a lot of
+variables with large p-values. Hence, we decided to do variables selection
+to reduce variables in our model.
+
+```{r}
+# variable selection ( drop the variables the has large p-value)
+model_lm2 = lm(sleep ~ as.factor(Mex) + as.factor(NHwhite) + as.factor(NHblack) + 
+                as.factor(pa_low) + age + alcohol + pad + sugar + caffeine, 
+               data = data_new1)
+
+summary(model_lm2)
+```
+
+The Adjusted $R^2$ is still really low for our fitted model after selecting variables.
+So We decided to use spline regression to improve our model fitting result.
+
+### Part 2.
+
+First, we look at the relarionship between only "pad" and "sleep"
+```{r}
+# fit model for "pad" variable
+model_pad1 = lm(sleep ~ pad,  data = data_new1)
+summary(model_pad1)
+coef(model_pad1) # extract coefficient
+```
+
+Plot for "sleep" and "pad" to see the relationship between Activity times and sleeping hours with 1769 obs.
+```{r}
+# plot relationship between Activity times and sleeping hours
+plot(data_new1$pad, data_new1$sleep, col="darkblue"
+     ,xlab="Activity times (hr.)", ylab="Sleep (hr.)",
+     main = "Relationship between Activity times and sleeping hours (1769 obs)")
+# add regression line to the plot
+abline(coef(model_pad1)[1], coef(model_pad1)[2], col = "red")
+# add legend
+legend(200, 12, legend = "Prediction Line",
+      col="red", lty = 1, cex=0.8)
+```
+
+The data only has 1769 observations, so we decided to re-merge the data and select
+only "sleep" and "physical_indv" data.
+```{r}
+# create another dataset to fit only sleep and pad
+data2 = merge(sleep, physical_indv, all = TRUE)
+# rename colnames
+names(data2) = c("seqn", "sleep", "padtimes", "paddurat")
+
+# omit the rows that have missing values
+data2_naomit = data2[complete.cases(data2[])]
+# compute total activity times (hr.) in past 30 days
+data2_pad = data2_naomit[, .(pad = paddurat*padtimes/60)]
+# cbind two dataset
+data2_use = cbind(data2_naomit, data2_pad)
+
+# take mean for repeated seqn
+data2_avg_value = data2_use[, lapply(.SD, mean), by = .(seqn), 
+                           .SDcols = c("sleep", "padtimes", "paddurat", "pad")]
+```
+
+Now we have a dataset with 3946 observations.
+
+We look at the relarionship between only "pad" and "sleep" for larger dataset.
+```{r}
+# fit model for "pad" variable
+model_pad2 = lm(sleep ~ pad,  data = data2_avg_value)
+summary(model_pad2)
+coef(model_pad2) # extract colnames
+```
+
+Plot for "sleep" and "pad" to see the relationship between Activity times and sleeping hours with 3946 obs.
+```{r}
+# plot relationship between Activity times and sleeping hours
+plot(data2_avg_value$pad, data2_avg_value$sleep, col="darkblue"
+     ,xlab="Activity times (hr.)", ylab="Sleep (hr.)",
+     main = "Relationship between Activity times and sleeping hours (3946 obs)")
+# add regression line to the plot
+abline(coef(model_pad2)[1], coef(model_pad2)[2], col = "red")
+# add legend
+legend(200, 12, legend = "Prediction Line",
+      col="red", lty = 1, cex=0.8)
+```
+
+Reported sleep should be an approximate value. Add a jitter so that 
+more respondents get the right approximated value, and we can make "sleep" a
+"continuous" variable.
+```{r}
+# create jitter
+random = rnorm(nrow(data2_avg_value), 0, 0.1)
+# add jitter to "sleep" variable
+data_new2 = data2_avg_value[, .(sleep = sleep + random, pad)]
+```
+
+To compare the effect of spline on "pad" variable, we first fit linear regression 
+for "sleep" and "pad", then we fit spline regression for "sleep" and "pad".
+
+Fit linear model for "pad" and "sleep" after adding jitter to "sleep".
+
+```{r}
+# do spline for "pad" variable
+model_lm3 = lm(sleep ~ pad,  data = data_new2)
+summary(model_lm3)
+coef(model_lm3) # extract coefficient
+```
+
+Fit Spline model for "pad" and "sleep" after adding jitter to "sleep".
+
+```{r}
+# do spline for "pad" variable
+spline_model = lm(sleep ~ bs(pad, df = 3),  data = data_new2)
+summary(spline_model)
+```
+
+Plot to compare regression line before and after splines.
+```{r}
+# plot splines results compare with the one without spline
+plot(data_new2$pad, data_new2$sleep, 
+     col="grey", xlab="Activity times (hr.)", ylab="Sleep (hr.) with jitter", 
+     main = "Splines Regression Result")
+fit1 = smooth.spline(data_new2$pad, data_new2$sleep, df=3) 
+abline(coef(model_lm3)[1], coef(model_lm3)[2], col = "yellow")
+lines(fit1, col="red",lwd=2)
+legend(200, 10, legend=c("Spline", "Without Spline"),
+       col=c("red", "yellow"), lty = 1, cex=0.8)
+```
+
+### Summary
+  To sum up, people getting more physical activity doesn't lead to more sleeping
+hours. However, intaking less alcohol or caffeine do increase sleeping hours.
+Although some research said that getting more physical activity will lead to a
+better sleeping, in our analysis, we do not find physical activity significantly
+related to sleeping hours. In fact there is almost no obvious relation between
+those two variables.
+  After fitting activity hours (pad) to a spline regression, it did fits the model
+a bit better. But the relationship between physical activity and sleeping hours is
+still not obvious. So we cannot say people with more physial activity
+get longer sleep in this case.
+
