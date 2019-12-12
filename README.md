@@ -4,7 +4,7 @@
   This project uses NHANES data (2005-2006) to answer the question whether people with more physial activity gets longer sleep. 
   
 ## Group members and tools 
-  Jingwen Xiao (R--dplyr & mgcv), Tingwei Lin (R--data.table & splines) and Xinyang Qi (Python--pandas & statistic models)
+  Jingwen Xiao (R--dplyr & mgcv), Ting-Wei Lin (R--data.table & splines) and Xinyang Qi (Python--pandas & statistic models)
 
 ## Outline
 Our current outline includes the following items:
