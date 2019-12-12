@@ -156,20 +156,6 @@ legend(200, 10, legend=c("Spline", "Without Spline"),
 
 
 
-# fit logit regression
-data_logit = avg_value[, sleep := 1L * {sld010h > 7}]
-
-model_logit = glm(sleep ~ alq130 + ridageyr + as.factor(ridreth1) + 
-                    indfminc + as.factor(ridexmon) +  drtsugr +  
-                    drtcaff + pad, 
-                  data_logit, family = (binomial))
-
-summary(model_logit)
-
-# compute the odds ration
-exp(coef(model_logit))
-
-
 
 
 

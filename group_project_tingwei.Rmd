@@ -236,6 +236,6 @@ related to sleeping hours. In fact there is almost no obvious relation between
 those two variables.
   After fitting activity hours (pad) to a spline regression, it did fits the model
 a bit better. But the relationship between physical activity and sleeping hours is
-still not obvious. So we cannot say people with more physial activity
+still not obvious. So we cannot say people with more physical activity
 get longer sleep in this case.
 
