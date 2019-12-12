@@ -9,7 +9,7 @@
 ##
 ## Author: Jingwen(Alex) Xiao
 ## Email: xjingwen@umich.edu
-## Last Modified Date: ODecember 11, 2019
+## Last Modified Date: December 11, 2019
 
 # Data read and process.
 library(SASxport)
