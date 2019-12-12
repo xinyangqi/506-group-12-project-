@@ -25,11 +25,10 @@ dietary2 = as.data.table(sasxport.get(paste0(path, "DR2TOT_D.XPT")))
 # keep the variables we need, and filter the unreasonale data
 sleep = sleep[sld010h < 77, .(seqn, sld010h)]
 alc = alc[alq130 < 100,.(seqn, alq130)]
-physical = physical[paq520 < 7 & pad080 < 700, .(seqn, pad080, paq520)]
+physical = physical[paq520 < 7, .(seqn, paq520)]
 physical_indv = physical_indv[, .(seqn, padtimes, paddurat)]
 demo = demo[indfminc < 12, .(seqn, riagendr, ridageyr, ridreth1, indfminc, ridexmon)]
 dietary1 = dietary1[, .(seqn, dr1tkcal, dr1tsugr, dr1tcaff, day = 1)]
-dietary2 = dietary2[, .(seqn, dr2tkcal, dr2tsugr, dr2tcaff, day = 2)]
 
 # rename colnames
 names(dietary1) = c("seqn", "drtkcal", "drtsugr", "drtcaff", "day")
@@ -41,39 +40,48 @@ data1 = merge(data1, physical_indv, all = TRUE)
 data1 = merge(data1, demo, all = TRUE)
 data1 = merge(data1, dietary1, all = TRUE)
 
+names(data1) = c("seqn", "sleep", "pa_comp", "alcohol", "padtimes", 
+                 "paddurat", "gender", "age", "race", "inc", "winter", 
+                 "energy", "sugar", "caffeine", "day")
+
 # omit the rows that have missing values
 data_naomit = data1[complete.cases(data1[])]
+# compute total activity times (hr.) in past 30 days
 pad = data_naomit[, .(pad = paddurat*padtimes/60)]
-
+# cbind two dataset
 data_use = cbind(data_naomit, pad)
 
 # take mean for repeated seqn
 avg_value = data_use[, lapply(.SD, mean), by = .(seqn), 
-                    .SDcols = c("sld010h", "alq130", "pad080", "paq520", 
-                                "padtimes", "paddurat", "ridageyr", "ridreth1", 
-                                "indfminc", "ridexmon", "drtkcal",  "drtsugr",
-                                "drtcaff", "pad")]
+                    .SDcols = c("sleep", "alcohol", "pa_comp", 
+                                "padtimes", "paddurat", "age", "race", 
+                                "inc", "winter", "gender", "energy",
+                                "sugar", "caffeine", "pad")]
+# decode the factors
+data_new = avg_value[, `:=` (Mex = 1L * {race == 1}, Hisp = 1L * {race == 2}, 
+              NHwhite = 1L * {race == 3}, NHblack = 1L * {race == 4}, 
+              pa_high = 1L * {pa_comp == 1}, pa_low = 1L * {pa_comp == 2}, 
+              winter = 1L * {winter == 1})]
 
-# fit linear model 
-model_lm1 = lm(sld010h ~ alq130 + paq520 + ridageyr + as.factor(ridreth1) + 
-                indfminc + as.factor(ridexmon) + drtkcal +  drtsugr +  
-                drtcaff + pad,  data = avg_value)
+# fit linear model for all variables
+model_lm1 = lm(sleep ~ alcohol + energy + sugar + caffeine + 
+                 as.factor(gender) + age + as.factor(inc) + as.factor(winter) + 
+                 as.factor(Mex) + as.factor(Hisp) + as.factor(NHwhite)+
+                 as.factor(NHblack) + as.factor(pa_high) + as.factor(pa_low) + 
+                 pad, data = data_new)
 
 summary(model_lm1)
 
-# variable selection (drop the one with largest pvalue)
-model_lm2 = lm(sld010h ~ alq130 + paq520 + ridageyr + as.factor(ridreth1) + 
-                indfminc + as.factor(ridexmon) +  drtsugr +  
-                drtcaff + pad,  data = avg_value)
+# variable selection ( drop the variables the has large p-value)
+model_lm2 = lm(sleep ~ as.factor(Mex) + as.factor(NHwhite) + as.factor(NHblack) + 
+                as.factor(pa_low) + age + alcohol + pad + sugar + caffeine, 
+               data = data_new)
 
 summary(model_lm2)
 
-# variable selection (drop the one with largest pvalue)
-model_lm3 = lm(sld010h ~ alq130 + ridageyr + as.factor(ridreth1) + 
-                indfminc + as.factor(ridexmon) +  drtsugr +  
-                drtcaff + pad,  data = avg_value)
-
-summary(model_lm3)
+# fit model for "pad" variable
+model_pad = lm(sleep ~ pad,  data = data_new)
+summary(model_pad)
 
 # do spline for "pad" variable
 spline_model = lm(sld010h ~ alq130 + ridageyr + as.factor(ridreth1) + 
@@ -96,13 +104,14 @@ summary(model_logit)
 exp(coef(model_logit))
 
 # plot relationship between Activity times and sleeping hours
-plot(avg_value$sld010h, avg_value$pad, col="black"
+plot(avg_value$sld010h, avg_value$drtcaff, col="black"
      ,xlab="Sleep (hr.)", ylab="Activity times (hr.)",
      main = "Relationship between Activity times and sleeping hours")
 
 # plot splines results
 plot(avg_value$sld010h, avg_value$pad, col="grey",xlab="Sleep (hr.)"
      , ylab="Activity times (hr.)", main = "Splines Results")
-fit1 = smooth.spline(avg_value$sld010h, avg_value$pad, df=3) 
+fit1 = smooth.spline(avg_value$sld010h, avg_value$drtcaff, df=3) 
 lines(fit1, col="red",lwd=2)
+
 
