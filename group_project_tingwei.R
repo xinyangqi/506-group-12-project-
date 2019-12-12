@@ -1,4 +1,4 @@
-## Group Project Draft
+## Group Project
 ## Author: Ting Wei Lin, tingwei@umich.edu
 ## Using data from NHANES. Select several dataset we need and
 ## analyse whether the variables have influence on sleeping hours
@@ -28,10 +28,10 @@ alc = alc[alq130 < 100,.(seqn, alq130)]
 physical = physical[paq520 < 7, .(seqn, paq520)]
 physical_indv = physical_indv[, .(seqn, padtimes, paddurat)]
 demo = demo[indfminc < 12, .(seqn, riagendr, ridageyr, ridreth1, indfminc, ridexmon)]
-dietary1 = dietary1[, .(seqn, dr1tkcal, dr1tsugr, dr1tcaff, day = 1)]
+dietary1 = dietary1[, .(seqn, dr1tkcal, dr1tsugr, dr1tcaff)]
 
 # rename colnames
-names(dietary1) = c("seqn", "drtkcal", "drtsugr", "drtcaff", "day")
+names(dietary1) = c("seqn", "drtkcal", "drtsugr", "drtcaff")
 
 # merge day 1 data
 data1 = merge(sleep, physical, all = TRUE)
@@ -83,7 +83,7 @@ summary(model_lm2)
 # fit model for "pad" variable
 model_pad1 = lm(sleep ~ pad,  data = data_new1)
 summary(model_pad1)
-coef(model_pad1)
+coef(model_pad1) # extract coefficient
 
 # plot relationship between Activity times and sleeping hours
 plot(data_new1$pad, data_new1$sleep, col="darkblue"
@@ -94,6 +94,7 @@ abline(coef(model_pad1)[1], coef(model_pad1)[2], col = "red")
 
 # create another dataset to fit only sleep and pad
 data2 = merge(sleep, physical_indv, all = TRUE)
+# rename colnames
 names(data2) = c("seqn", "sleep", "padtimes", "paddurat")
 
 # omit the rows that have missing values
@@ -110,7 +111,7 @@ data2_avg_value = data2_use[, lapply(.SD, mean), by = .(seqn),
 # fit model for "pad" variable
 model_pad2 = lm(sleep ~ pad,  data = data2_avg_value)
 summary(model_pad2)
-coef(model_pad2)
+coef(model_pad2) # extract colnames
 
 # plot relationship between Activity times and sleeping hours
 plot(data_new2$pad, data_new2$sleep, col="darkblue"
@@ -119,9 +120,16 @@ plot(data_new2$pad, data_new2$sleep, col="darkblue"
 # add regression line to the plot
 abline(coef(model_pad2)[1], coef(model_pad2)[2], col = "red")
 
+# create jitter
 random = rnorm(nrow(data2_avg_value), 0, 0.1)
-
+# add jitter to "sleep" variable
 data_new2 = data2_avg_value[, .(sleep = sleep + random, pad)]
+
+# do spline for "pad" variable
+model_lm3 = lm(sleep ~ pad,  data = data_new2)
+summary(model_lm3)
+coef(model_lm3) # extract coefficient
+
 
 # do spline for "pad" variable
 spline_model = lm(sleep ~ bs(pad),  data = data_new2)
@@ -130,9 +138,10 @@ summary(spline_model)
 
 # plot splines results
 plot(data_new2$pad, data_new2$sleep, 
-     col="grey",xlab="Sleep (hr.)" , ylab="Activity times (hr.)", 
-     main = "Splines Results")
+     col="grey", xlab="Sleep (hr.)", ylab="Activity times (hr.)", 
+     main = "Splines Regression Result")
 fit1 = smooth.spline(data_new2$pad, data_new2$sleep, df=3) 
+abline(coef(model_lm3)[1], coef(model_lm3)[2], col = "yellow")
 lines(fit1, col="red",lwd=2)
 
 
