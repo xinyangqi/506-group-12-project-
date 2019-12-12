@@ -4,6 +4,7 @@
 library(SASxport)
 library(dplyr)
 library(mgcv)
+library(ggplot2)
 alc = read.xport("C:/Users/Surface-pc/Downloads/ALQ_D.xpt")
 phy = read.xport("C:/Users/Surface-pc/Downloads/PAQ_D.xpt")
 phy_id = read.xport("C:/Users/Surface-pc/Downloads/PAQIAF_D.xpt")
@@ -94,7 +95,7 @@ data_pad = left_join(slp, phy, by="seqn") %>%
 data_pad = data_pad%>%filter(rowSums(apply(data_pad,2,is.na))==0) %>% select(-"pa_comp")%>%
   group_by(seqn) %>% mutate(pad = mean(pad)) %>% distinct()
 
-res_pad2 = gam(sleep~s(pad, k=5), data = data_pad)
+res_pad2 = gam(sleep~s(pad), data = data_pad)
 df2 = data.frame(x = data_pad$pad, y = data_pad$sleep, z = fitted(res_pad2))
 ggplot(df2) + geom_point(aes(x = x, y = y), col = "cornflowerblue") + 
   geom_line(aes(x = x, y =z ), col = "gray") + 
