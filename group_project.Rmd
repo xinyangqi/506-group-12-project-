@@ -162,7 +162,7 @@ dietary1 = dietary1[, .(seqn, dr1tkcal, dr1tsugr, dr1tcaff)]
 names(dietary1) = c("seqn", "drtkcal", "drtsugr", "drtcaff")
 ```
 
-### Part1.
+### Part 1. Fit OLS model for all variables in the dataset.
 
 ```{r}
 # merge day 1 data
@@ -236,7 +236,7 @@ summary(model_lm2)
 The Adjusted $R^2$ is still really low for our fitted model after selecting variables.
 So We decided to use spline regression to improve our model fitting result.
 
-### Part 2.
+### Part 2. Fit spline regression to improve our model fitting result.
 
 First, we look at the relarionship between only "pad" and "sleep"
 ```{r}
