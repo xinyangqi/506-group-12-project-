@@ -1,0 +1,52 @@
+---
+title: "Data description example"
+author: "Jingwen(Alex) Xiao"
+date: "2019/12/11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+  Utenlized variables:
+  
+  |  Variable Name  | Description | Type | Note |
+  |:---------------:|:------------------:|:-----------------:|:-----------------:|
+  |  seqn |     sequential number  |    integer     |    -     |
+  |  gender |     gender of respondent       |      factor     |  1=male, 0=female |
+  |  age  |     age of respondent       |     continuous     |  -  |
+  |  inc  |     family income       |      continuous     |   - |
+  | winter  |     whether surveyed in winter       |      factor     |    1=yes, 0=no      |
+  | alcohol  |     alcohol drinks per day       |      integer     |    -    |
+  | energy(_1)  |     daily energy intake       |      continuous     |    -      |
+  | sugar(_1)  |     sugar intake       |      continuous     |    -      |
+  | caffe(_1)  |     caffeine intake       |      continuous     |    -      |
+  | sleep  |     hours of sleep       |      continuous     |  will be converted to  double   |
+  | Mex  |     is Mexican American       |      factor   |  converted from **race**, 1=yes, 0=no      |
+  | Hisp  |     is other Hispanic  |      factor     |    converted from **race**, 1=yes, 0=no      |
+  | NHwhite  |is non-Hispanic white  |  factor |  converted from **race**, 1=yes, 0=no      |
+  | NHblack  |  is non-Hispanic black  |  factor     |   converted from **race**, 1=yes, 0=no      |
+  | pa_high  | more physically active than people of same age| factor  |converted from **pa_comp**, 1=yes, 0=no |
+  |pa_low|less physically active than people of same age|factor|converted from **pa_comp**, 1=yes, 0=no   |
+  | pad |how much physical activity last month|continuous|converted from **pa_time** and **pa_dur**, in minutes |
+  
+  
+  Original data missing situations:
+  
+  |  Variable Name  | Missing amount | Note |
+  |:---------------:|:------------------:|:------------------:|
+  |seqn        |0|  -|
+  |gender     |0|-|
+  |age       |0|-|
+  |race     | 0|-|
+  |inc   |166|-|
+  |winter | 649|-|
+  |alcohol | 13606|-|
+  |pa_time  |5457|physical activity times|
+  |pa_dur  |5453|physical activity duration|
+  |pa_comp |3197|physical activity compared to people of same age|
+  |energy_1 | 1691|-|
+  |sugar_1 |1691|-|
+  |caffe_1  |1691|-|
+  |sleep |6608|-|
