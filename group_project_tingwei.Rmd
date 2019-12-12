@@ -5,6 +5,10 @@ date: "12/11/2019"
 output: pdf_document
 ---
 
+### Description
+ Using data from NHANES. Select several dataset we need and analyse whether the
+ variables have influence on sleeping hours. Fitting OLS and Spline regression.
+
 ```{r, message=FALSE}
 # libraries: -------------------------------------------------------------------
 library(Hmisc)

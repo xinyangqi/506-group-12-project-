@@ -2,6 +2,7 @@
 ## Author: Ting Wei Lin, tingwei@umich.edu
 ## Using data from NHANES. Select several dataset we need and
 ## analyse whether the variables have influence on sleeping hours
+## Fitting OLS and Spline regression
 ## Updated: Dec. 11 2019
 
 # libraries: -------------------------------------------------------------------
@@ -43,17 +44,17 @@ data1 = merge(data1, dietary1, all = TRUE)
 # rename colnames
 names(data1) = c("seqn", "sleep", "pa_comp", "alcohol", "padtimes", 
                  "paddurat", "gender", "age", "race", "inc", "winter", 
-                 "energy", "sugar", "caffeine", "day")
+                 "energy", "sugar", "caffeine")
 
 # omit the rows that have missing values
 data1_naomit = data1[complete.cases(data1[])]
 # compute total activity times (hr.) in past 30 days
-data1_pad = data_naomit[, .(pad = paddurat*padtimes/60)]
+data1_pad = data1_naomit[, .(pad = paddurat*padtimes/60)]
 # cbind two dataset
-data1_use = cbind(data_naomit, pad)
+data1_use = cbind(data1_naomit, data1_pad)
 
 # take mean for repeated seqn
-data1_avg_value = data_use[, lapply(.SD, mean), by = .(seqn), 
+data1_avg_value = data1_use[, lapply(.SD, mean), by = .(seqn), 
                     .SDcols = c("sleep", "alcohol", "pa_comp", 
                                 "padtimes", "paddurat", "age", "race", 
                                 "inc", "winter", "gender", "energy",
@@ -87,10 +88,13 @@ coef(model_pad1) # extract coefficient
 
 # plot relationship between Activity times and sleeping hours
 plot(data_new1$pad, data_new1$sleep, col="darkblue"
-     ,xlab="Sleep (hr.)", ylab="Activity times (hr.)",
-     main = "Relationship between Activity times and sleeping hours")
+     ,xlab="Activity times (hr.)", ylab="Sleep (hr.)",
+     main = "Relationship between Activity times and sleeping hours (1769 obs)")
 # add regression line to the plot
 abline(coef(model_pad1)[1], coef(model_pad1)[2], col = "red")
+# add legend
+legend(200, 12, legend = "Prediction Line",
+       col="red", lty = 1, cex=0.8)
 
 # create another dataset to fit only sleep and pad
 data2 = merge(sleep, physical_indv, all = TRUE)
@@ -114,11 +118,14 @@ summary(model_pad2)
 coef(model_pad2) # extract colnames
 
 # plot relationship between Activity times and sleeping hours
-plot(data_new2$pad, data_new2$sleep, col="darkblue"
-     ,xlab="Sleep (hr.)", ylab="Activity times (hr.)",
-     main = "Relationship between Activity times and sleeping hours")
+plot(data2_avg_value$pad, data2_avg_value$sleep, col="darkblue"
+     ,xlab="Activity times (hr.)", ylab="Sleep (hr.)",
+     main = "Relationship between Activity times and sleeping hours (3946 obs)")
 # add regression line to the plot
 abline(coef(model_pad2)[1], coef(model_pad2)[2], col = "red")
+# add legend
+legend(200, 12, legend = "Prediction Line",
+      col="red", lty = 1, cex=0.8)
 
 # create jitter
 random = rnorm(nrow(data2_avg_value), 0, 0.1)
@@ -136,13 +143,15 @@ spline_model = lm(sleep ~ bs(pad),  data = data_new2)
 
 summary(spline_model)
 
-# plot splines results
+# plot splines results compare with the one without spline
 plot(data_new2$pad, data_new2$sleep, 
-     col="grey", xlab="Sleep (hr.)", ylab="Activity times (hr.)", 
+     col="grey", xlab="Activity times (hr.)", ylab="Sleep (hr.) with jitter", 
      main = "Splines Regression Result")
 fit1 = smooth.spline(data_new2$pad, data_new2$sleep, df=3) 
 abline(coef(model_lm3)[1], coef(model_lm3)[2], col = "yellow")
 lines(fit1, col="red",lwd=2)
+legend(200, 10, legend=c("Spline", "Without Spline"),
+       col=c("red", "yellow"), lty = 1, cex=0.8)
 
 
 
