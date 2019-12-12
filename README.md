@@ -15,10 +15,10 @@ Our current outline includes the following items:
 
 ## Uploaded Files 
  
- **Xinyang Qi**:
+ **Xinyang Qi**: Under "xinyang" file
  - 506 group project.ipynb (The first version of Python solutions. Contains data cleaning, variable selection based on OLS outcomes and covariance matrices, and a primary GLS solution using **statistic models**. Current GLS model includes a cubic spline modification for activity duration.)
   
- **Jingwen Xiao**:
+ **Jingwen Xiao**: Under "Jingwen Xiao file" file
  - group_project_1.R (The first version of R solutions using packages **dplyr** and **mgcv**. Contains data cleaning, variable recoding and selection based on primary GAM model outcomes and a simple OLS for reference. Current GAM model includes factor variables and smooth splines up to k = 3.)
  - group_project_1.Rmd (Corresponding Rmarkdown file.)
  - group_project_1.html (Corresponding HTML file. Have to be downloaded for previewing.)
@@ -30,7 +30,7 @@ Our current outline includes the following items:
    - Make attempts towards cross-vaildation, though somewhat failed.
    - Calculate the RMSEs. )
  
- **Ting-Wei Lin**:
+ **Ting-Wei Lin**: Under "TingWeiLin" file
   - group_project_tingwei.R (The last version of R file, contains R solutions using packages **data.table** and **splines**. Contains data cleaning, variable selection based on OLS outcomes and an OLS model keeping the main variables of interest.)
   - group_project_tingwei.Rmd (Corresponding Rmarkdown file.)
   - group_project.R (The first version of R file, the combination of the group projects)
