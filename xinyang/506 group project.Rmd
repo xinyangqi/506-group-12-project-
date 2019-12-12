@@ -1,0 +1,178 @@
+---
+title: "506 group project"
+author: "Xinyang Qi"
+date: "12/11/2019"
+output: html_document
+---
+
+# Stats 506 group project
+
+# This script contains the analyse process of group project. We create some OLS models to analyse our question and try to use splines to improve our fit.
+
+# Author : Xinyang Qi
+
+# Update : 12/11/2019
+
+Firstly, import package and read data.
+
+```{python,eval=FALSE}
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from patsy import dmatrices
+from patsy import dmatrix
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import matplotlib.pyplot as plt
+
+data1=pd.read_sas('ALQ_D.xpt')
+data2=pd.read_sas('PAQ_D.xpt')
+data3=pd.read_sas('PAQIAF_D.xpt')
+data4=pd.read_sas('SLQ_D.xpt')
+data5=pd.read_sas('DR1TOT_D.xpt')
+data6=pd.read_sas('DEMO_D.xpt')
+```
+
+Then, extract and clean data.
+
+```{python,eval=FALSE}
+data1=data1[['SEQN','ALQ130']]
+data2=data2[['SEQN','PAQ520']]
+data4=data4[['SEQN','SLD010H']]
+data3=data3[['SEQN','PADTIMES','PADDURAT']]
+data5=data5[['SEQN','DR1TKCAL','DR1TSUGR','DR1TCAFF']]
+data6=data6[['SEQN','RIAGENDR','RIDAGEYR','RIDRETH1','INDFMINC','RIDEXMON']]
+
+data=data[(data.PAQ520 != 9)&(data.PAQ520 != 7)]
+data=data[(data.SLD010H != 77) & (data.SLD010H != 99)]
+data=data[data.INDFMINC < 12]
+data=data[data.ALQ130<800]
+data=data.dropna()
+data=data.groupby('SEQN').mean()
+
+data.columns=['alcohol','act_level','act_times','act_durat','sleep','energy','sugars','caffeine','gender','age','race','inc','winter']
+
+data['gender']=data['gender']-1
+data['Mex']=1*(data['race']==1)
+data['Hisp']=1*(data['race']==2)
+data['NHwhite']=1*(data['race']==3)
+data['NHblack']=1*(data['race']==4)
+data['pa_high']=1*(data['act_level']==1)
+data['pa_low']=1*(data['act_level']==2)
+data['winter']=1*(data['winter']==1)
+data['pad']=data['act_times']*data['act_durat']/60
+data=data.drop(['act_level','act_times','act_durat','race'],axis=1)
+
+data['gender']=data['gender'].apply(str)
+data['Mex']=data['Mex'].apply(str)
+data['Hisp']=data['Hisp'].apply(str)
+data['NHwhite']=data['NHwhite'].apply(str)
+data['NHblack']=data['NHblack'].apply(str)
+data['pa_high']=data['pa_high'].apply(str)
+data['pa_low']=data['pa_low'].apply(str)
+data['winter']=data['winter'].apply(str)
+```
+
+# Part 1
+Firstly, we create a model with all predictors in order to find the effect of activity time and other factors on sleep time.
+
+```{python,eval=FALSE}
+mod1 = smf.ols(formula='sleep ~ alcohol+energy+sugars+caffeine+gender+age+inc+winter+Mex+Hisp+NHwhite+NHblack+pa_high+pa_low+pad', data=data)
+res1 = mod1.fit()
+print(res1.summary())
+```
+![](picture1.png)
+
+
+Then, in order to improve the model, we select variables based on their vif and Covariance matrix at first. Then, using backward elimination to select variables.
+
+Create an OLS regression model based on a subset of variables. 
+
+Based on the summary below, the value of adjusted R square increases and we get a better model. 
+
+```{python,eval=FALSE}
+mod2 = smf.ols(formula='sleep ~ C(Mex)+C(NHwhite)+C(NHblack)+C(pa_low)+age+alcohol+pad+sugars+caffeine',data=data).fit()
+mod2.summary()
+```
+
+![](picture2.png)
+
+From the summary above, we find that compared with other predictors, the effect of activity time is not very significant.
+
+# Part 2
+
+secondly, we will create model to analyse the relationship between activity time and sleep time. 
+
+
+```{python,eval=FALSE}
+mod3 = smf.ols(formula='sleep ~ pad',data = data).fit()
+mod3.summary()
+```
+
+![](picture3.png)
+
+
+```{python,eval=FALSE}
+plt.scatter(data.pad,data.sleep)
+plt.plot(data.pad,mod3.predict(),color = 'red')
+plt.show()
+```
+
+![](picture4.png)
+
+From the graph above, we find that although the fitted line has a curvature, it is not convincing.
+
+Because alcohol data is not available for respondents age under 20, we try to create model with full dataset.
+
+And because reported sleep should be an approximate value, we will give each sleep time a random disturbance to let 'sleep time' become a continuous variable. 
+
+```{python,eval=FALSE}
+data_pad = pd.merge(data3,data4,on='SEQN',how='inner')
+data_pad = data_pad[data_pad.SLD010H != 77]
+data_pad = data_pad[data_pad.SLD010H != 99]
+data_pad = data_pad.dropna()
+data_pad = data_pad.groupby('SEQN').mean()
+data_pad['pad']=data_pad['PADTIMES']*data_pad['PADDURAT']/60
+data_pad = data_pad.drop(['PADTIMES','PADDURAT'],axis=1)
+data_pad.columns = ['sleep','pad']
+data_pad = data_pad['sleep']
+eps = np.random.normal(0,0.1,size = data_pad.shape[0])
+data_pad['sleep']=data_pad['sleep']+eps
+mod6 = smf.ols(formula='sleep ~ pad',data = data_pad).fit()
+mod6.summary()
+```
+
+![](picture5.png)
+
+
+```{python,eval=FALSE}
+plt.scatter(data_pad.pad,data_pad.sleep)
+plt.plot(data_pad.pad,mod6.predict(),color = 'red')
+plt.show()
+```
+
+![](picture6.png)
+
+From the summary, we can find that activity time still have very little effect on sleep time. 
+Maybe the activity time does not have a linear relationship with sleep time. So we decide to use spline regression to try to improve its fit.
+
+```{python,eval=FALSE}
+transformed_x1 = dmatrix("bs(data_pad.pad, df=3, degree = 3, include_intercept=False)",
+                        {"data_pad.pad": data_pad.pad}, return_type='dataframe')
+mod7 = sm.GLM(data_pad.sleep, transformed_x1).fit()
+print(mod7.summary())
+```
+
+![](picture7.png)
+
+```{python,eval=FALSE}
+plt.scatter(data_pad.pad,data_pad.sleep)
+plt.plot(data_pad.pad,mod7.predict(),color = 'red')
+plt.show()
+```
+
+![](picture8.png)
+
+Based on the summary and graph above, although the spline regression improve the fit slightly, the relationship between sleep time and activity time is still not strong.
+
+Base on all the analyse above, although all models have a weak trend that people who do activity for longer time tend to sleep less, we have to conclude that compared with the effect of alcohol and caffeine on sleep time, the effect of activity time is much little.
